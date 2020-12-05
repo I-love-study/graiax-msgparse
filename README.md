@@ -1,16 +1,16 @@
 # graiax-msgparse
 
-###这是什么
+### 这是什么
 这是一个为匹配[graia-application-mirai](https://github.com/GraiaProject/Application)中MessageChain的设计创造出来的一个为匹配MessageChain做出的argparse
 
-####安装
+#### 安装
 ``` bash
 pip install graiax-msgparse
 # 或使用 poetry
 poetry add graiax-msgparse
 ```
 
-###如何使用
+### 如何使用
 注意：在查看示例代码前，个人建议先查看以下文档
 [graia-document中对Application的介绍](https://graia-document.vercel.app/)
 [Python-document中对argparse模块的介绍](https://docs.python.org/zh-cn/3.8/library/argparse.html)
@@ -38,7 +38,7 @@ async def parse_test(app: GraiaMiraiApplication, group: Group, message: MessageC
 
 当`sapce_in_gap`为True时，将会自动在俩个element之间添加空格
 
-####用Element2Msg, Element2Mirai转换非纯Plain消息
+#### 用Element2Msg, Element2Mirai转换非纯Plain消息
 由于MessageChainParser中将会把除了Plain以外的元素进行特殊处理，所以假设你的参数中带有At,AtAll,Image参数，那么可能会返回这么一串奇怪的东西
 `[json_element:eyJ0eXBlIjoiQXQiLCJ0YXJnZXQiOjEyMywiZGlzcGxheSI6bnVsbH0=]`
 如果需要将这串玩意变成MessageChain或者是Mirai码
