@@ -15,13 +15,18 @@ poetry add graiax-msgparse
 [graia-document中对Application的介绍](https://graia-document.vercel.app/)
 [Python-document中对argparse模块的介绍](https://docs.python.org/zh-cn/3.8/library/argparse.html)
 ``` python
-from graiax.msgparse import MessageChainParser, Element2Msg, Element2Mirai
+from graiax.msgparse import MessageChainParser, ParserExit, Element2Msg, Element2Mirai
 
 @bcc.receiver(GroupMessage, dispatchers = [Kanata([RegexMatch('parse.*')])])
 async def parse_test(app: GraiaMiraiApplication, group: Group, message: MessageChain, member: Member):
 	parser = MessageChainParser(start_string = 'parse', description='parse测试')
 	parser.add_argument('-r')
-	parser.parse_obj(message, space_in_gap = True)
+	try:
+		parser.parse_obj(message, space_in_gap = True)
+	except ParserExit as e:
+		await app.sendGroupMessage(group, MessageChain.create([
+			Plain(str(parser.usage) if e.status == 0 else '参数不足或不正确，请使用 --help 参数查询使用帮助')
+			]))
 ```
 方法几乎跟python自带的ArgumentParser使用方法如出一辙(毕竟是继承于此)
 我们就先看看二者不同的区别

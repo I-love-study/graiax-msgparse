@@ -11,6 +11,11 @@ try:
 except ImportError:
 	import json
 
+class ParserExit(RuntimeError):
+    def __init__(self, status=0, message=None):
+        self.status = status
+        self.message = message
+
 class Element2Msg:
 	"""
 	将String转化为MessageChain
@@ -128,19 +133,18 @@ class MessageChainParser(ArgumentParser):
 			raise ValueError('Unsupport method')
 		super().__init__(*args, **kwargs)
 
+	def _print_message(self, *args, **kwargs):
+		...
+
+	def exit(self, status=0, message=None):
+		raise ParserExit(status=status, message=message)
+
 	def parse_args(self, message: MessageChain, space_in_gap: bool = False):
 		if self.start:
 			if not message.asDisplay().startswith(self.start):
-				raise ValueError()
+				raise ValueError('Uncorrect start')
 			message_arg = message.asMerged().asHypertext()[(0,len(self.start)):]
 		else:
 			message_arg = message.asMerged().asHypertext()
 		shell_like_list = Msg2Element(self.method)(message_arg, space_in_gap)
-		print(Element2Msg(self.method)(shell_like_list[0]))
-		try:
-			return super().parse_args(shell_like_list)
-		except ParserExit as e:
-			if e.status == 0:
-				print(0)
-			else:
-				print(e.status)
+		return super().parse_args(shell_like_list)
