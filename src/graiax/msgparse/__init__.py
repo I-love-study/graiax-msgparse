@@ -1,6 +1,8 @@
-from graia.application.message.elements.internal import Plain, Image, At, AtAll, Voice
+from graia.application.message.elements.internal import *
 from graia.application.message.chain import MessageChain
 from argparse import *
+from io import StringIO
+from typing import Union
 import pickle
 import base64
 import shlex
@@ -16,13 +18,13 @@ class ParserExit(RuntimeError):
         self.status = status
         self.message = message
 
-class Element2Msg:
+class MsgString:
 	"""
-	将String转化为MessageChain
+	将String与MessageChain无丢失互相转化的办法
 	使用方法
 	>>> message = MessageChain.create([Plain('-s '), At(123)])
 	>>> parser = MessageChainParser()
-	>>> parser.add_argument('-s', type = String_To_Msg())
+	>>> parser.add_argument('-s', type = MsgString.decode())
 	>>> args = parser.parse_args(message)
 	>>> args.s
 	__root__ = [At(123)]
@@ -30,47 +32,48 @@ class Element2Msg:
 	method默认为'json'(可选'pickle'，前提是parse_obj的method也为'pickle')
 	"""
 
-	def __init__(self, method: str = 'json'):
-		method_type = {'json': self._json_msg, 'pickle': self._pickle_msg}
-		if method in method_type:
-			self.method = method_type[method]
-		else:
-			raise ValueError(f'no such a method:{method}')
+	@classmethod
+	def encode(cls, method: str='json'):
+		all_method = {'json': cls.json_string, 'pickle': cls.pickle_string}
+		if method not in all_method:
+			raise ValueError('Unsupport method')
+		return all_method[method]
 
-	def __call__(self, string: str) -> MessageChain:
-		return self.method(string)
+	@classmethod
+	def decode(cls, method: str='json'):
+		all_method = {'json': cls.json_msg, 'pickle': cls.pickle_msg}
+		if method not in all_method:
+			raise ValueError('Unsupport method')
+		return all_method[method]
 
-	def _json_msg(self, string: str) -> MessageChain:
+	@staticmethod
+	def json_msg(string: str) -> MessageChain:
 		result = []
 		for match in regex.split(r'(\[json_element:.+?\])', string):
 			if element := regex.fullmatch(r'(\[json_element:(.+?)\])', match):
-				result.append(json.loads(base64.b64decode(element.group(2))))
+				try:
+					result.append(json.loads(base64.b64decode(element.group(2))))
+				except:
+					result.append({'type': 'Plain', 'text': match})
 			elif match:#去除空字符串
 				result.append({'type': 'Plain', 'text': match})
 		return MessageChain.parse_obj(result)
 
-	def _pickle_msg(self, string: str) -> MessageChain:
+	@staticmethod
+	def pickle_msg(string: str) -> MessageChain:
 		result = []
 		for match in regex.split(r'(\[pickle_element:.+?\])', string):
 			if element := regex.fullmatch(r'(\[pickle_element:(.+?)\])', match):
-				result.append(pickle.loads(base64.b64decode(element.group(2))))
+				try:
+					result.append(pickle.loads(base64.b64decode(element.group(2))))
+				except:
+					result.append(Plain(match))
 			elif match:#去除空字符串
 				result.append(Plain(match))
 		return MessageChain.create(result)
 
-class Msg2Element:
-
-	def __init__(self, method: str = 'json'):
-		method_type = {'json': self._json_string, 'pickle': self._pickle_string}
-		if method in method_type:
-			self.method = method_type[method]
-		else:
-			raise ValueError(f'no such a method:{method}')
-
-	def __call__(self, string: str, space_in_gap: bool) -> MessageChain:
-		return self.method(string, space_in_gap)
-
-	def _json_string(self, message_arg: MessageChain, space_in_gap: bool) -> list:
+	@staticmethod
+	def json_string(message_arg: MessageChain, space_in_gap: bool=False) -> list:
 		str_input = ''
 		gap = ' ' if space_in_gap else ''
 		hyper_message = message_arg.dict()['__root__']
@@ -87,9 +90,10 @@ class Msg2Element:
 					str_input += gap
 				str_input += '[json_element:{}]'.format(
 					json_element.decode("ascii"))
-		return shlex.split(str_input)
+		return str_input
 
-	def _pickle_string(self, message_arg: MessageChain, space_in_gap: bool) -> list:
+	@staticmethod
+	def pickle_string(message_arg: MessageChain, space_in_gap: bool=False) -> list:
 		str_input = ''
 		gap = ' ' if space_in_gap else ''
 		hyper_message = message_arg.__root__
@@ -106,7 +110,7 @@ class Msg2Element:
 					str_input += gap
 				str_input += '[pickle_element:{}]'.format(
 					pickle_element.decode("ascii"))
-		return shlex.split(str_input)
+		return str_input
 
 class Element2Mirai:
 	def __init__(self, method: str = 'json'):
@@ -129,22 +133,25 @@ class MessageChainParser(ArgumentParser):
 	def __init__(self, *args, **kwargs):
 		self.start = kwargs.pop('start_string', None)
 		self.method = kwargs.pop('method', 'json')
+		self.std = kwargs.pop('std', StringIO())
 		if self.method not in ('json', 'pickle'):
 			raise ValueError('Unsupport method')
 		super().__init__(*args, **kwargs)
 
-	def _print_message(self, *args, **kwargs):
-		...
+	def _print_message(self, message, file=None):
+		self.std.write(message)
 
 	def exit(self, status=0, message=None):
 		raise ParserExit(status=status, message=message)
 
-	def parse_args(self, message: MessageChain, space_in_gap: bool = False):
-		if self.start:
-			if not message.asDisplay().startswith(self.start):
-				raise ValueError('Uncorrect start')
-			message_arg = message.asMerged().asHypertext()[(0,len(self.start)):]
-		else:
+	def parse_args(self, message: Union[MessageChain, str], space_in_gap: bool = False):
+		if type(message) is MessageChain:
 			message_arg = message.asMerged().asHypertext()
-		shell_like_list = Msg2Element(self.method)(message_arg, space_in_gap)
-		return super().parse_args(shell_like_list)
+			if self.start and message.asDisplay().startswith(self.start):
+				message_arg = message_arg[(0,len(self.start)):]
+			message_string = MsgString.encode(self.method)(message_arg, space_in_gap)
+		elif type(message) is str:
+				message_string = message[len(self.start):] if self.start else message
+		else:
+			raise ValueError('Unsupport message type')
+		return super().parse_args(shlex.split(message_string))

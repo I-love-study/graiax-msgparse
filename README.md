@@ -12,8 +12,11 @@ poetry add graiax-msgparse
 
 ### 如何使用
 注意：在查看示例代码前，个人建议先查看以下文档
+
 [graia-document中对Application的介绍](https://graia-document.vercel.app/)
+
 [Python-document中对argparse模块的介绍](https://docs.python.org/zh-cn/3.8/library/argparse.html)
+
 ``` python
 from graiax.msgparse import MessageChainParser, ParserExit, Element2Msg, Element2Mirai
 
@@ -48,11 +51,10 @@ async def parse_test(app: GraiaMiraiApplication, group: Group, message: MessageC
 `[json_element:eyJ0eXBlIjoiQXQiLCJ0YXJnZXQiOjEyMywiZGlzcGxheSI6bnVsbH0=]`
 如果需要将这串玩意变成MessageChain或者是Mirai码
 你就会需要
-`Element2Msg`和`Element2Mirai`
+`MsgString`
 ``` python
-from graiax.msgparse import MessageChainParser, Element2Msg, Element2Mirai
+from graiax.msgparse import MessageChainParser, MsgString
 ...
-parser.add_argument('-r',type = Element2Msg())#将接收到的信息转换为MessageChain的形式
-parser.add_argument('-s',type = Element2Mirai())#将接收到的信息转换为Mirai码的形式
+parser.add_argument('-r',type = MsgString.decode())#将接收到的信息转换为MessageChain的形式
 parser.parse_obj(message)
 ```
