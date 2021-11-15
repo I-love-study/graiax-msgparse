@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "graiax-msgparse"
-version = "0.0.2"
+version = "0.0.4"
 description = "A argparse for MessageChain in Graia Framework"
 authors = ["I_love_study <1450069615@qq.com>"]
 license = "AGPL-3.0"
@@ -14,7 +14,6 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-graia-application-mirai = "^0.11.0"
 
 [tool.poetry.dev-dependencies]
 

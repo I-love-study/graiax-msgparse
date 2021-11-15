@@ -1,5 +1,11 @@
-from graia.application.message.elements.internal import *
-from graia.application.message.chain import MessageChain
+try: 
+	from graia.application.message.elements.internal import *
+	from graia.application.message.chain import MessageChain
+	is_ariadne = False
+except ImportError:
+	from graia.ariadne.message.element import *
+	from graia.ariadne.message.chain import MessageChain
+	is_ariadne = True
 from argparse import *
 from io import StringIO
 from typing import Union
@@ -112,16 +118,6 @@ class MsgString:
 					pickle_element.decode("ascii"))
 		return str_input
 
-class Element2Mirai:
-	def __init__(self, method: str = 'json'):
-		if method in ('json', 'pickle'):
-			self.method = Element2Msg(method)
-		else:
-			raise ValueError(f'no such a method:{method}')
-
-	def __call__(self, string: str):
-		return self.method(string).asSerializationString()
-
 class MessageChainParser(ArgumentParser):
 	"""
 	为MessageChain设计的Parser
@@ -146,7 +142,8 @@ class MessageChainParser(ArgumentParser):
 
 	def parse_args(self, message: Union[MessageChain, str], space_in_gap: bool = False):
 		if type(message) is MessageChain:
-			message_arg = message.asMerged().asHypertext()
+			message = message.merge() if is_ariadne else message.asMerged()
+			message_arg = message.include(Plain, At, AtAll, Image, Face)
 			if self.start and message.asDisplay().startswith(self.start):
 				message_arg = message_arg[(0,len(self.start)):]
 			message_string = MsgString.encode(self.method)(message_arg, space_in_gap)

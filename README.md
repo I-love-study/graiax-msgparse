@@ -2,6 +2,7 @@
 
 ### 这是什么
 这是一个为匹配[graia-application-mirai](https://github.com/GraiaProject/Application)中MessageChain的设计创造出来的一个为匹配MessageChain做出的argparse
+注：从0.0.4开始会尝试匹配[graia-ariadne](https://github.com/GraiaProject/Ariadne)进行适配
 
 #### 安装
 ``` bash
